@@ -314,7 +314,31 @@
                 });
             });
             
-            // 绘制连接线
+            // 定义每层的颜色
+            const layerColors = {
+                '输入层': {
+                    base: '#0A84FF',    // 蓝色
+                    glow: '#64D2FF'
+                },
+                '隐藏层1': {
+                    base: '#BF5AF2',    // 紫色
+                    glow: '#DA8FFF'
+                },
+                '隐藏层2': {
+                    base: '#FF375F',    // 红色
+                    glow: '#FF7B9C'
+                },
+                '隐藏层3': {
+                    base: '#30D158',    // 绿色
+                    glow: '#7AE582'
+                },
+                '输出层': {
+                    base: '#FFD60A',    // 金色
+                    glow: '#FFE55C'
+                }
+            };
+
+            // 绘制连接线时使用渐变色
             for(let i = 0; i < layers.length - 1; i++) {
                 const startLayerX = startX + i * layerSpacing;
                 const endLayerX = startX + (i + 1) * layerSpacing;
@@ -324,9 +348,18 @@
                     
                     for(let k = 0; k < layers[i + 1].nodes; k++) {
                         const endY = 80 + k * nodeSpacing;
-                        // 根据前后节点的激活值决定连接线的颜色
                         const strength = (activations[i][j] + activations[i+1][k]) / 2;
-                        networkContext.strokeStyle = `rgba(0, 87, 146, ${strength * 0.5})`;
+                        
+                        // 创建渐变
+                        const gradient = networkContext.createLinearGradient(
+                            startLayerX, startY, endLayerX, endY
+                        );
+                        const startColor = layerColors[layers[i].name].base;
+                        const endColor = layerColors[layers[i+1].name].base;
+                        gradient.addColorStop(0, `${startColor}${Math.floor(strength * 127).toString(16).padStart(2, '0')}`);
+                        gradient.addColorStop(1, `${endColor}${Math.floor(strength * 127).toString(16).padStart(2, '0')}`);
+                        
+                        networkContext.strokeStyle = gradient;
                         networkContext.lineWidth = strength * 2;
                         
                         networkContext.beginPath();
@@ -337,28 +370,50 @@
                 }
             }
             
-            // 绘制节点
+            // 绘制节点时添加发光效果
             layers.forEach((layer, i) => {
                 const x = startX + i * layerSpacing;
+                const colors = layerColors[layer.name];
                 
                 for(let j = 0; j < layer.nodes; j++) {
                     const y = 80 + j * nodeSpacing;
+                    const activation = activations[i][j];
                     
-                    // 外圈
+                    // 绘制发光效果
+                    const gradient = networkContext.createRadialGradient(
+                        x, y, 0,
+                        x, y, nodeRadius * 2
+                    );
+                    gradient.addColorStop(0, `${colors.glow}${Math.floor(activation * 255).toString(16).padStart(2, '0')}`);
+                    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    
+                    networkContext.beginPath();
+                    networkContext.arc(x, y, nodeRadius * 2, 0, Math.PI * 2);
+                    networkContext.fillStyle = gradient;
+                    networkContext.fill();
+                    
+                    // 绘制节点主体
                     networkContext.beginPath();
                     networkContext.arc(x, y, nodeRadius, 0, Math.PI * 2);
                     networkContext.fillStyle = 'white';
                     networkContext.fill();
-                    networkContext.strokeStyle = '#666666';
-                    networkContext.lineWidth = 1;
+                    networkContext.strokeStyle = colors.base;
+                    networkContext.lineWidth = 2;
                     networkContext.stroke();
                     
-                    // 激活效果
-                    const activation = activations[i][j];
+                    // 绘制激活效果
                     networkContext.beginPath();
                     networkContext.arc(x, y, nodeRadius * 0.8, 0, Math.PI * 2);
-                    networkContext.fillStyle = `rgba(0, 87, 146, ${activation})`;
+                    const activeGradient = networkContext.createRadialGradient(
+                        x, y, 0,
+                        x, y, nodeRadius * 0.8
+                    );
+                    activeGradient.addColorStop(0, colors.glow);
+                    activeGradient.addColorStop(1, colors.base);
+                    networkContext.fillStyle = activeGradient;
+                    networkContext.globalAlpha = activation;
                     networkContext.fill();
+                    networkContext.globalAlpha = 1;
                 }
             });
         }

@@ -32,13 +32,43 @@
         .canvas-container {
             display: flex;
             justify-content: space-around;
-            align-items: center;
+            align-items: flex-start;
             margin-top: 20px;
+        }
+
+        .drawing-section {
+            text-align: center;
+        }
+
+        .network-section {
+            text-align: center;
         }
 
         canvas {
             border: 1px solid #ccc;
             border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #005792;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #003d66;
+        }
+
+        #result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f5f5f5;
         }
     </style>
 </head>
@@ -48,10 +78,19 @@
     </header>
     <div class="container">
         <div class="canvas-container">
-            <!-- 绘图板 -->
-            <canvas id="drawingCanvas" width="280" height="280"></canvas>
-            <!-- 神经网络展示 -->
-            <canvas id="networkCanvas" width="500" height="400"></canvas>
+            <div class="drawing-section">
+                <h2>手写数字区域</h2>
+                <canvas id="drawingCanvas" width="280" height="280"></canvas>
+                <div>
+                    <button onclick="clearCanvas()">清除画布</button>
+                    <button onclick="predict()">预测</button>
+                </div>
+                <div id="result">预测结果将在这里显示</div>
+            </div>
+            <div class="network-section">
+                <h2>神经网络结构</h2>
+                <canvas id="networkCanvas" width="500" height="400"></canvas>
+            </div>
         </div>
     </div>
     <script>
@@ -60,29 +99,141 @@
         const networkCanvas = document.getElementById('networkCanvas');
         const drawingContext = drawingCanvas.getContext('2d');
         const networkContext = networkCanvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+
+        // 初始化绘图网格
+        function initGrid() {
+            drawingContext.strokeStyle = '#e5e5e5';
+            drawingContext.lineWidth = 1;
+            const gridSize = 28;
+            const cellSize = 280 / gridSize;
+            
+            for(let i = 0; i <= gridSize; i++) {
+                drawingContext.beginPath();
+                drawingContext.moveTo(i * cellSize, 0);
+                drawingContext.lineTo(i * cellSize, 280);
+                drawingContext.stroke();
+                
+                drawingContext.beginPath();
+                drawingContext.moveTo(0, i * cellSize);
+                drawingContext.lineTo(280, i * cellSize);
+                drawingContext.stroke();
+            }
+        }
 
         // 绘图板事件
         let isDrawing = false;
-        drawingCanvas.addEventListener('mousedown', () => isDrawing = true);
-        drawingCanvas.addEventListener('mouseup', () => isDrawing = false);
+        let lastX = 0;
+        let lastY = 0;
+
+        drawingCanvas.addEventListener('mousedown', startDrawing);
         drawingCanvas.addEventListener('mousemove', draw);
+        drawingCanvas.addEventListener('mouseup', stopDrawing);
+        drawingCanvas.addEventListener('mouseout', stopDrawing);
 
-        function draw(event) {
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function draw(e) {
             if (!isDrawing) return;
-            drawingContext.fillStyle = 'black';
+            
             drawingContext.beginPath();
-            drawingContext.arc(event.offsetX, event.offsetY, 5, 0, Math.PI * 2);
-            drawingContext.fill();
+            drawingContext.lineWidth = 15;
+            drawingContext.lineCap = 'round';
+            drawingContext.strokeStyle = 'black';
+            
+            drawingContext.moveTo(lastX, lastY);
+            drawingContext.lineTo(e.offsetX, e.offsetY);
+            drawingContext.stroke();
+            
+            [lastX, lastY] = [e.offsetX, e.offsetY];
         }
 
-        // 示例神经网络展示
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function clearCanvas() {
+            drawingContext.fillStyle = 'white';
+            drawingContext.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            initGrid();
+        }
+
+        // 神经网络可视化
         function drawNetwork() {
-            networkContext.fillStyle = '#005792';
-            networkContext.font = '20px Arial';
-            networkContext.fillText('神经网络展示', 150, 50);
-            // 这里可以添加更多神经网络的可视化代码
+            const layers = [
+                {name: '输入层', nodes: 5},
+                {name: '隐藏层1', nodes: 5},
+                {name: '隐藏层2', nodes: 5},
+                {name: '隐藏层3', nodes: 5},
+                {name: '输出层', nodes: 5}
+            ];
+            
+            const startX = 80;
+            const layerSpacing = 100;
+            const nodeSpacing = 50;
+            const nodeRadius = 6;
+            
+            // 绘制层标签
+            networkContext.font = '12px Arial';
+            networkContext.fillStyle = '#333333';
+            layers.forEach((layer, i) => {
+                const x = startX + i * layerSpacing;
+                networkContext.fillText(layer.name, x - 20, 40);
+            });
+            
+            // 绘制连接线
+            networkContext.strokeStyle = '#e5e5e5';
+            networkContext.lineWidth = 0.5;
+            
+            for(let i = 0; i < layers.length - 1; i++) {
+                const startLayerX = startX + i * layerSpacing;
+                const endLayerX = startX + (i + 1) * layerSpacing;
+                
+                for(let j = 0; j < layers[i].nodes; j++) {
+                    const startY = 80 + j * nodeSpacing;
+                    
+                    for(let k = 0; k < layers[i + 1].nodes; k++) {
+                        const endY = 80 + k * nodeSpacing;
+                        networkContext.beginPath();
+                        networkContext.moveTo(startLayerX, startY);
+                        networkContext.lineTo(endLayerX, endY);
+                        networkContext.stroke();
+                    }
+                }
+            }
+            
+            // 绘制节点
+            layers.forEach((layer, i) => {
+                const x = startX + i * layerSpacing;
+                
+                for(let j = 0; j < layer.nodes; j++) {
+                    const y = 80 + j * nodeSpacing;
+                    
+                    networkContext.beginPath();
+                    networkContext.arc(x, y, nodeRadius, 0, Math.PI * 2);
+                    networkContext.fillStyle = 'white';
+                    networkContext.fill();
+                    networkContext.strokeStyle = '#666666';
+                    networkContext.lineWidth = 1;
+                    networkContext.stroke();
+                }
+            });
         }
 
+        function predict() {
+            // 这里添加预测逻辑
+            resultDiv.textContent = "正在进行预测...";
+            // 模拟预测过程
+            setTimeout(() => {
+                resultDiv.textContent = "预测结果: 3 (置信度: 95.5%)";
+            }, 500);
+        }
+
+        // 初始化
+        initGrid();
         drawNetwork();
     </script>
 </body>

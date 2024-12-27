@@ -140,6 +140,9 @@
             });
             
             [lastX, lastY] = [e.offsetX, e.offsetY];
+
+            // 触发神经网络反应
+            updateNetworkVisualization(e.offsetX / drawingCanvas.width, e.offsetY / drawingCanvas.height);
         }
 
         function stopDrawing() {
@@ -151,20 +154,17 @@
         }
 
         function startFading() {
-            // 清除画布
-            drawingContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-            initGrid();
-            
-            // 按时间顺序重绘所有点，但使用半透明效果
             let fadeStart = Date.now();
-            let fadeDuration = 1000; // 消失动画持续1秒
+            let fadeDuration = 1000;
             
             function animate() {
                 let currentTime = Date.now();
                 let progress = (currentTime - fadeStart) / fadeDuration;
                 
                 if (progress >= 1) {
-                    drawingPoints = []; // 清空点数组
+                    drawingPoints = [];
+                    // 重置神经网络显示
+                    drawNetwork();
                     return;
                 }
                 
@@ -172,7 +172,7 @@
                 drawingContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
                 initGrid();
                 
-                // 使用逐渐增加的透明度重绘所有线条
+                // 重绘消失的线条
                 drawingContext.strokeStyle = `rgba(0, 0, 0, ${1 - progress})`;
                 drawingContext.lineWidth = 15;
                 drawingContext.lineCap = 'round';
@@ -183,6 +183,12 @@
                         drawingContext.moveTo(point.startX, point.startY);
                         drawingContext.lineTo(point.endX, point.endY);
                         drawingContext.stroke();
+                        
+                        // 更新神经网络显示
+                        updateNetworkVisualization(
+                            point.endX / drawingCanvas.width,
+                            point.endY / drawingCanvas.height
+                        );
                     }
                 }
                 
@@ -215,10 +221,16 @@
                 networkContext.fillText(layer.name, x - 20, 40);
             });
             
-            // 绘制连接线
-            networkContext.strokeStyle = '#e5e5e5';
-            networkContext.lineWidth = 0.5;
+            // 计算激活值（模拟神经网络的激活）
+            const activations = layers.map((layer, layerIndex) => {
+                return Array(layer.nodes).fill(0).map((_, nodeIndex) => {
+                    // 根据鼠标位置和节点位置计算激活值
+                    const activation = Math.sin(x * 5 + y * 3 + layerIndex + nodeIndex * 0.5) * 0.5 + 0.5;
+                    return activation;
+                });
+            });
             
+            // 绘制连接线
             for(let i = 0; i < layers.length - 1; i++) {
                 const startLayerX = startX + i * layerSpacing;
                 const endLayerX = startX + (i + 1) * layerSpacing;
@@ -228,6 +240,11 @@
                     
                     for(let k = 0; k < layers[i + 1].nodes; k++) {
                         const endY = 80 + k * nodeSpacing;
+                        // 根据前后节点的激活值决定连接线的颜色
+                        const strength = (activations[i][j] + activations[i+1][k]) / 2;
+                        networkContext.strokeStyle = `rgba(0, 87, 146, ${strength * 0.5})`;
+                        networkContext.lineWidth = strength * 2;
+                        
                         networkContext.beginPath();
                         networkContext.moveTo(startLayerX, startY);
                         networkContext.lineTo(endLayerX, endY);
@@ -243,6 +260,7 @@
                 for(let j = 0; j < layer.nodes; j++) {
                     const y = 80 + j * nodeSpacing;
                     
+                    // 外圈
                     networkContext.beginPath();
                     networkContext.arc(x, y, nodeRadius, 0, Math.PI * 2);
                     networkContext.fillStyle = 'white';
@@ -250,6 +268,97 @@
                     networkContext.strokeStyle = '#666666';
                     networkContext.lineWidth = 1;
                     networkContext.stroke();
+                    
+                    // 激活效果
+                    const activation = activations[i][j];
+                    networkContext.beginPath();
+                    networkContext.arc(x, y, nodeRadius * 0.8, 0, Math.PI * 2);
+                    networkContext.fillStyle = `rgba(0, 87, 146, ${activation})`;
+                    networkContext.fill();
+                }
+            });
+        }
+
+        // 添加神经网络可视化更新函数
+        function updateNetworkVisualization(x, y) {
+            // 清除之前的神经网络绘制
+            networkContext.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
+            
+            const layers = [
+                {name: '输入层', nodes: 5},
+                {name: '隐藏层1', nodes: 5},
+                {name: '隐藏层2', nodes: 5},
+                {name: '隐藏层3', nodes: 5},
+                {name: '输出层', nodes: 5}
+            ];
+            
+            const startX = 80;
+            const layerSpacing = 100;
+            const nodeSpacing = 50;
+            const nodeRadius = 6;
+            
+            // 绘制层标签
+            networkContext.font = '12px Arial';
+            networkContext.fillStyle = '#333333';
+            layers.forEach((layer, i) => {
+                const x = startX + i * layerSpacing;
+                networkContext.fillText(layer.name, x - 20, 40);
+            });
+            
+            // 计算激活值（模拟神经网络的激活）
+            const activations = layers.map((layer, layerIndex) => {
+                return Array(layer.nodes).fill(0).map((_, nodeIndex) => {
+                    // 根据鼠标位置和节点位置计算激活值
+                    const activation = Math.sin(x * 5 + y * 3 + layerIndex + nodeIndex * 0.5) * 0.5 + 0.5;
+                    return activation;
+                });
+            });
+            
+            // 绘制连接线
+            for(let i = 0; i < layers.length - 1; i++) {
+                const startLayerX = startX + i * layerSpacing;
+                const endLayerX = startX + (i + 1) * layerSpacing;
+                
+                for(let j = 0; j < layers[i].nodes; j++) {
+                    const startY = 80 + j * nodeSpacing;
+                    
+                    for(let k = 0; k < layers[i + 1].nodes; k++) {
+                        const endY = 80 + k * nodeSpacing;
+                        // 根据前后节点的激活值决定连接线的颜色
+                        const strength = (activations[i][j] + activations[i+1][k]) / 2;
+                        networkContext.strokeStyle = `rgba(0, 87, 146, ${strength * 0.5})`;
+                        networkContext.lineWidth = strength * 2;
+                        
+                        networkContext.beginPath();
+                        networkContext.moveTo(startLayerX, startY);
+                        networkContext.lineTo(endLayerX, endY);
+                        networkContext.stroke();
+                    }
+                }
+            }
+            
+            // 绘制节点
+            layers.forEach((layer, i) => {
+                const x = startX + i * layerSpacing;
+                
+                for(let j = 0; j < layer.nodes; j++) {
+                    const y = 80 + j * nodeSpacing;
+                    
+                    // 外圈
+                    networkContext.beginPath();
+                    networkContext.arc(x, y, nodeRadius, 0, Math.PI * 2);
+                    networkContext.fillStyle = 'white';
+                    networkContext.fill();
+                    networkContext.strokeStyle = '#666666';
+                    networkContext.lineWidth = 1;
+                    networkContext.stroke();
+                    
+                    // 激活效果
+                    const activation = activations[i][j];
+                    networkContext.beginPath();
+                    networkContext.arc(x, y, nodeRadius * 0.8, 0, Math.PI * 2);
+                    networkContext.fillStyle = `rgba(0, 87, 146, ${activation})`;
+                    networkContext.fill();
                 }
             });
         }

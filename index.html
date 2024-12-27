@@ -49,27 +49,6 @@
             border-radius: 5px;
             margin-bottom: 10px;
         }
-
-        button {
-            background-color: #005792;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
-
-        button:hover {
-            background-color: #003d66;
-        }
-
-        #result {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f5f5f5;
-        }
     </style>
 </head>
 <body>
@@ -81,11 +60,6 @@
             <div class="drawing-section">
                 <h2>手写数字区域</h2>
                 <canvas id="drawingCanvas" width="280" height="280"></canvas>
-                <div>
-                    <button onclick="clearCanvas()">清除画布</button>
-                    <button onclick="predict()">预测</button>
-                </div>
-                <div id="result">预测结果将在这里显示</div>
             </div>
             <div class="network-section">
                 <h2>神经网络结构</h2>
@@ -99,7 +73,9 @@
         const networkCanvas = document.getElementById('networkCanvas');
         const drawingContext = drawingCanvas.getContext('2d');
         const networkContext = networkCanvas.getContext('2d');
-        const resultDiv = document.getElementById('result');
+
+        // 存储绘制的点
+        let drawingPoints = [];
 
         // 初始化绘图网格
         function initGrid() {
@@ -134,6 +110,12 @@
         function startDrawing(e) {
             isDrawing = true;
             [lastX, lastY] = [e.offsetX, e.offsetY];
+            drawingPoints.push({
+                type: 'start',
+                x: lastX,
+                y: lastY,
+                time: Date.now()
+            });
         }
 
         function draw(e) {
@@ -148,17 +130,66 @@
             drawingContext.lineTo(e.offsetX, e.offsetY);
             drawingContext.stroke();
             
+            drawingPoints.push({
+                type: 'draw',
+                startX: lastX,
+                startY: lastY,
+                endX: e.offsetX,
+                endY: e.offsetY,
+                time: Date.now()
+            });
+            
             [lastX, lastY] = [e.offsetX, e.offsetY];
         }
 
         function stopDrawing() {
-            isDrawing = false;
+            if (isDrawing) {
+                isDrawing = false;
+                // 1秒后开始消失动画
+                setTimeout(startFading, 1000);
+            }
         }
 
-        function clearCanvas() {
-            drawingContext.fillStyle = 'white';
-            drawingContext.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        function startFading() {
+            // 清除画布
+            drawingContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
             initGrid();
+            
+            // 按时间顺序重绘所有点，但使用半透明效果
+            let fadeStart = Date.now();
+            let fadeDuration = 1000; // 消失动画持续1秒
+            
+            function animate() {
+                let currentTime = Date.now();
+                let progress = (currentTime - fadeStart) / fadeDuration;
+                
+                if (progress >= 1) {
+                    drawingPoints = []; // 清空点数组
+                    return;
+                }
+                
+                // 清除画布并重绘网格
+                drawingContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                initGrid();
+                
+                // 使用逐渐增加的透明度重绘所有线条
+                drawingContext.strokeStyle = `rgba(0, 0, 0, ${1 - progress})`;
+                drawingContext.lineWidth = 15;
+                drawingContext.lineCap = 'round';
+                
+                for (let point of drawingPoints) {
+                    if (point.type === 'draw') {
+                        drawingContext.beginPath();
+                        drawingContext.moveTo(point.startX, point.startY);
+                        drawingContext.lineTo(point.endX, point.endY);
+                        drawingContext.stroke();
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
         }
 
         // 神经网络可视化
@@ -221,15 +252,6 @@
                     networkContext.stroke();
                 }
             });
-        }
-
-        function predict() {
-            // 这里添加预测逻辑
-            resultDiv.textContent = "正在进行预测...";
-            // 模拟预测过程
-            setTimeout(() => {
-                resultDiv.textContent = "预测结果: 3 (置信度: 95.5%)";
-            }, 500);
         }
 
         // 初始化

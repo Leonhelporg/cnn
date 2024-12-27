@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leon CNN - 神经网络可视化</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+        }
+
+        header {
+            text-align: center;
+            background-color: #005792;
+            color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Leon CNN - 神经网络可视化</h1>
+    </header>
+    <div class="container">
+        <div class="canvas-container">
+            <!-- 绘图板 -->
+            <canvas id="drawingCanvas" width="280" height="280"></canvas>
+            <!-- 神经网络展示 -->
+            <canvas id="networkCanvas" width="500" height="400"></canvas>
+        </div>
+    </div>
+    <script>
+        // 获取画布元素
+        const drawingCanvas = document.getElementById('drawingCanvas');
+        const networkCanvas = document.getElementById('networkCanvas');
+        const drawingContext = drawingCanvas.getContext('2d');
+        const networkContext = networkCanvas.getContext('2d');
+
+        // 绘图板事件
+        let isDrawing = false;
+        drawingCanvas.addEventListener('mousedown', () => isDrawing = true);
+        drawingCanvas.addEventListener('mouseup', () => isDrawing = false);
+        drawingCanvas.addEventListener('mousemove', draw);
+
+        function draw(event) {
+            if (!isDrawing) return;
+            drawingContext.fillStyle = 'black';
+            drawingContext.beginPath();
+            drawingContext.arc(event.offsetX, event.offsetY, 5, 0, Math.PI * 2);
+            drawingContext.fill();
+        }
+
+        // 示例神经网络展示
+        function drawNetwork() {
+            networkContext.fillStyle = '#005792';
+            networkContext.font = '20px Arial';
+            networkContext.fillText('神经网络展示', 150, 50);
+            // 这里可以添加更多神经网络的可视化代码
+        }
+
+        drawNetwork();
+    </script>
+</body>
+</html>

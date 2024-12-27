@@ -230,7 +230,7 @@
                 });
             });
             
-            // 绘制连接线
+            // 绘制连接线（简化版本，不使用渐变）
             for(let i = 0; i < layers.length - 1; i++) {
                 const startLayerX = startX + i * layerSpacing;
                 const endLayerX = startX + (i + 1) * layerSpacing;
@@ -240,10 +240,11 @@
                     
                     for(let k = 0; k < layers[i + 1].nodes; k++) {
                         const endY = 80 + k * nodeSpacing;
-                        // 根据前后节点的激活值决定连接线的颜色
                         const strength = (activations[i][j] + activations[i+1][k]) / 2;
-                        networkContext.strokeStyle = `rgba(0, 87, 146, ${strength * 0.5})`;
-                        networkContext.lineWidth = strength * 2;
+                        
+                        // 使用简单的灰色线条
+                        networkContext.strokeStyle = '#e5e5e5';  // 浅灰色
+                        networkContext.lineWidth = 0.5;  // 细线
                         
                         networkContext.beginPath();
                         networkContext.moveTo(startLayerX, startY);

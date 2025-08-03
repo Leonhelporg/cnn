@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="隐秘文本加密工具，支持中文、英文、数字的高度隐秘加密解密">
+    <meta name="keywords" content="文本加密,隐秘加密,汉字加密,Base64,Unicode">
+    <meta name="author" content="隐秘文本加密工具">
+    <title>隐秘文本加密工具</title>
+    
+    <!-- 引入样式文件 -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="js/encryption.js" as="script">
+    <link rel="preload" href="js/app.js" as="script">
+    
+    <!-- 网站图标 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部区域 -->
+        <header class="header">
+            <h1>🔐 隐秘文本加密工具</h1>
+            <p>支持中文、英文、数字的高度隐秘加密解密</p>
+        </header>
+
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 功能选项卡 -->
+            <nav class="function-tabs" role="tablist">
+                <button class="tab-button active" 
+                        role="tab" 
+                        aria-selected="true" 
+                        aria-controls="encrypt-tab"
+                        onclick="switchTab('encrypt')">
+                    🔒 加密功能
+                </button>
+                <button class="tab-button" 
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="decrypt-tab"
+                        onclick="switchTab('decrypt')">
+                    🔓 解密功能
+                </button>
+            </nav>
+
+            <!-- 加密功能区域 -->
+            <section id="encrypt-tab" class="tab-content active" role="tabpanel" aria-labelledby="encrypt-button">
+                <div class="encryption-section">
+                    <div class="input-group encrypt-section">
+                        <h3>原始文本</h3>
+                        <textarea id="originalText" 
+                                  placeholder="请输入要加密的文本，支持中文、英文、数字和特殊字符..."
+                                  aria-label="原始文本输入框"
+                                  spellcheck="false"></textarea>
+                        <div class="button-group">
+                            <button class="encrypt-btn" 
+                                    onclick="performEncryption()"
+                                    aria-label="加密文本"
+                                    title="快捷键: Ctrl+Enter">
+                                加密
+                            </button>
+                            <button class="clear-btn" 
+                                    onclick="clearOriginal()"
+                                    aria-label="清空原始文本">
+                                清空
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-group result-section">
+                        <h3>加密结果</h3>
+                        <textarea id="encryptedText" 
+                                  placeholder="加密后的文本将显示在这里..." 
+                                  readonly
+                                  aria-label="加密结果显示区域"
+                                  spellcheck="false"></textarea>
+                        <div class="button-group">
+                            <button class="copy-btn" 
+                                    onclick="copyToClipboard('encryptedText')"
+                                    aria-label="复制加密结果">
+                                复制
+                            </button>
+                            <button class="clear-btn" 
+                                    onclick="clearEncrypted()"
+                                    aria-label="清空加密结果">
+                                清空
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 解密功能区域 -->
+            <section id="decrypt-tab" class="tab-content" role="tabpanel" aria-labelledby="decrypt-button">
+                <div class="single-column">
+                    <div class="input-group decrypt-section">
+                        <h3>加密文本</h3>
+                        <textarea id="encryptedInput" 
+                                  placeholder="请粘贴要解密的加密文本..."
+                                  aria-label="加密文本输入框"
+                                  spellcheck="false"></textarea>
+                        <div class="button-group">
+                            <button class="decrypt-btn" 
+                                    onclick="performDecryptionFromInput()"
+                                    aria-label="解密文本"
+                                    title="快捷键: Ctrl+Enter">
+                                解密
+                            </button>
+                            <button class="clear-btn" 
+                                    onclick="clearEncryptedInput()"
+                                    aria-label="清空加密文本输入">
+                                清空
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-group result-section">
+                        <h3>解密结果</h3>
+                        <textarea id="decryptedResult" 
+                                  placeholder="解密后的原始文本将显示在这里..." 
+                                  readonly
+                                  aria-label="解密结果显示区域"
+                                  spellcheck="false"></textarea>
+                        <div class="button-group">
+                            <button class="copy-btn" 
+                                    onclick="copyToClipboard('decryptedResult')"
+                                    aria-label="复制解密结果">
+                                复制
+                            </button>
+                            <button class="clear-btn" 
+                                    onclick="clearDecryptedResult()"
+                                    aria-label="清空解密结果">
+                                清空
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 加载动画 -->
+            <div class="loading" id="loading" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
+                <p>处理中...</p>
+            </div>
+
+            <!-- 状态消息 -->
+            <div class="status" id="status" role="alert" aria-live="assertive"></div>
+
+            <!-- 统计信息 -->
+            <section class="stats" id="stats" style="display: none;" aria-label="统计信息">
+                <div class="stat-item">
+                    <div class="number" id="originalLength">0</div>
+                    <div class="label">原始长度</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number" id="encryptedLength">0</div>
+                    <div class="label">加密长度</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number" id="compressionRatio">0%</div>
+                    <div class="label">长度比率</div>
+                </div>
+            </section>
+
+            <!-- 信息说明区域 -->
+            <section class="info-section" aria-label="加密特点说明">
+                <h3>🛡️ 加密特点</h3>
+                <ul>
+                    <li>支持中文、英文、数字和特殊字符</li>
+                    <li>加密结果看起来像普通汉字，具有极高的隐蔽性</li>
+                    <li>使用Base64编码结合Unicode字符映射</li>
+                    <li>插入零宽字符增加破解难度</li>
+                    <li>每个字符映射到多个伪汉字，提高安全性</li>
+                    <li>完全可逆，解密后与原文完全一致</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <!-- 引入JavaScript文件 -->
+    <script src="js/encryption.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- 页面性能监控 -->
+    <script>
+        // 简单的性能监控
+        window.addEventListener('load', function() {
+            if (window.performance && window.performance.timing) {
+                const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+                console.log(`页面加载时间: ${loadTime}ms`);
+            }
+        });
+        
+        // 错误监控
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+        });
+        
+        // 未处理的Promise拒绝监控
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('未处理的Promise拒绝:', e.reason);
+        });
+    </script>
+</body>
+</html>
+
